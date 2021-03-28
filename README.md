@@ -10,7 +10,7 @@ API, currently supporting:
 
 -   login
 -   uploading
--   downloading
+-   downloading (In this fork, show a progressbar, and tkinter progressbar support added)
 -   deleting
 -   searching
 -   sharing
