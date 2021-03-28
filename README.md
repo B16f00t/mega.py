@@ -127,6 +127,9 @@ m.download_url('https://mega.co.nz/#!utYjgSTQ!OM4U3V5v_W4N5edSo0wolg1D5H0fwSrLD3
 m.download(file, '/home/john-smith/Desktop')
 # specify optional download filename (download_url() supports this also)
 m.download(file, '/home/john-smith/Desktop', 'myfile.zip')
+# Progressbar Tkinter
+m.download_url('https://mega.co.nz/#!utYjgSTQ!OM4U3V5v_W4N5edSo0wolg1D5H0fwSrLD3oLnLuS9pc', progress_bar=self.progressbar)
+
 ```
 
 ### Import a file from URL, optionally specify destination folder
