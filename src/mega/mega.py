@@ -13,10 +13,9 @@ import random
 import binascii
 import tempfile
 import shutil
-
 import requests
 from tenacity import retry, wait_exponential, retry_if_exception_type
-
+from tqdm import *
 from .errors import ValidationError, RequestError
 from .crypto import (a32_to_base64, encrypt_key, base64_url_encode,
                      encrypt_attr, base64_to_a32, base64_url_decode,
@@ -630,7 +629,7 @@ class Mega:
         nodes = self.get_files()
         return self.get_folder_link(nodes[node_id])
 
-    def download_url(self, url, dest_path=None, dest_filename=None):
+    def download_url(self, url, dest_path=None, dest_filename=None, progress_bar=None):
         """
         Download a file by it's public url
         """
@@ -643,6 +642,7 @@ class Mega:
             dest_path=dest_path,
             dest_filename=dest_filename,
             is_public=True,
+            progress_bar=progress_bar
         )
 
     def _download_file(self,
@@ -651,7 +651,8 @@ class Mega:
                        dest_path=None,
                        dest_filename=None,
                        is_public=False,
-                       file=None):
+                       file=None,
+                       progress_bar=None):
         if file is None:
             if is_public:
                 file_key = base64_to_a32(file_key)
@@ -694,6 +695,9 @@ class Mega:
 
         input_file = requests.get(file_url, stream=True).raw
 
+        total_size_in_bytes = int(input_file.headers.get('content-length', 0))
+        progress = tqdm(total=total_size_in_bytes, unit='iB', unit_scale=True)
+
         if dest_path is None:
             dest_path = ''
         else:
@@ -713,8 +717,14 @@ class Mega:
             iv_str = a32_to_str([iv[0], iv[1], iv[0], iv[1]])
 
             for chunk_start, chunk_size in get_chunks(file_size):
+                x = chunk_size
+                y = total_size_in_bytes
                 chunk = input_file.read(chunk_size)
                 chunk = aes.decrypt(chunk)
+                progress.update(chunk_size)
+                if progress_bar:
+                    progress_bar.step((99.9 / total_size_in_bytes) * chunk_size)
+
                 temp_output_file.write(chunk)
 
                 encryptor = AES.new(k_str, AES.MODE_CBC, iv_str)
@@ -736,6 +746,7 @@ class Mega:
                 file_info = os.stat(temp_output_file.name)
                 logger.info('%s of %s downloaded', file_info.st_size,
                             file_size)
+            progress.close()
             file_mac = str_to_a32(mac_str)
             # check mac integrity
             if (file_mac[0] ^ file_mac[1],
